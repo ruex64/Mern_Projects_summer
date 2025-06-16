@@ -15,3 +15,7 @@
 
 - **N** → **Node.js**  
   A JavaScript runtime environment that allows running JavaScript on the server. Comes with npm (Node Package Manager) for managing dependencies.
+
+
+- **JS** → **JavaScript** 
+has variables let const var, objects array, rest and spread operator, Promises
