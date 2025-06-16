@@ -18,4 +18,4 @@
 
 
 - **JS** → **JavaScript** 
-has variables let const var, objects array, rest and spread operator, Promises
+has variables let const var, objects array, rest and spread operator, Promises, then catch in promises 
