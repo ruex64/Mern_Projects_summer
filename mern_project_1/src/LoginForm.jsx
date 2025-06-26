@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-const Login = ({ updateUserDetails }) => {
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { useDispatch } from 'react-redux';
+import { serverEndpoint } from './config';
+
+const Login = () => {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
-
-
+  const dispatch = useDispatch();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,74 +17,75 @@ const Login = ({ updateUserDetails }) => {
     e.preventDefault();
     setError('');
 
-    const trimmedUsername = form.username.trim();
-    const trimmedPassword = form.password.trim();
+    const { username, password } = form;
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
 
-    if (!trimmedUsername && !trimmedPassword) {
+    if (!trimmedUsername || !trimmedPassword) {
       setError('Both fields are required');
       return;
     }
-    if (!trimmedUsername) {
-      setError('UserName is required');
-      return;
-    }
-    if (!trimmedPassword) {
-      setError('Password is required');
+
+    if (trimmedUsername.length < 3 || trimmedPassword.length < 6) {
+      setError('Invalid credentials length');
       return;
     }
 
-    if (trimmedUsername.length < 3) {
-      setError('Username must be at least 3 characters');
-      return;
-    }
+    const body = { username: trimmedUsername, password: trimmedPassword };
+    const config = { withCredentials: true };
 
-    if (trimmedPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    const envUsername = import.meta.env.VITE_LOGIN_USERNAME;
-    const envPassword = import.meta.env.VITE_LOGIN_PASSWORD;
-
-    if (trimmedUsername === envUsername && trimmedPassword === envPassword) {
-      //Data to be sent to the server
-      const body = {
-        username: trimmedUsername,
-        password: trimmedPassword
-      };
-      const config = {
-        withCredentials: true //Tells axios to include cookie in the request + some other auth headers
-      };
-      try {
-        const response = await axios.post('http://localhost:5001/auth/login', body, config);
-        console.log(response);
-        updateUserDetails({
-      
-          username: 'admin',
-          password: '123456',
-        });
-
-      } catch (error) {
-        console.log(error);
-        setError({ message: "Somthing went wrong Please try again" });
-      }
-
+    try {
+      const res = await axios.post(`${serverEndpoint}/auth/login`, body, config);
+      dispatch({
+        type: 'SET_USER',
+        payload: res.data.user
+      });
+    } catch (err) {
+      console.error(err);
+      setError('Invalid username or password');
     }
   };
+
+  const handleGoogleSuccess = async (authResponse) => {
+    try {
+      const idToken = authResponse?.credential;
+      if (!idToken) {
+        setError("No ID token received from Google.");
+        return;
+      }
+
+      const res = await axios.post(`${serverEndpoint}/auth/google-auth`, { idToken }, {
+        withCredentials: true
+      });
+
+      dispatch({
+        type: 'SET_USER',
+        payload: res.data.user
+      });
+    } catch (error) {
+      console.error(error);
+      setError("Google login failed. Please try again.");
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Google login failed.");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4  bg-cover bg-radial-[at_25%_25%] from-white to-zinc-900 to-75% bg-center bg-no-repeat h-screen w-screen" >
-      <div className="bg-white/50 shadow-xl/30  backdrop-blur-sm p-6 rounded-lg w-full max-w-sm hover:bg-white/100">
-        <h2 className="text-xl font-semibold mb-4 ">Sign in to Continue</h2>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-cover bg-radial-[at_25%_25%] from-white to-zinc-900 to-75% bg-center bg-no-repeat h-screen w-screen">
+      <div className="bg-white/50 shadow-xl/30 backdrop-blur-sm p-6 rounded-lg w-full max-w-sm hover:bg-white/100">
+        <h2 className="text-xl font-semibold mb-4">Sign in to Continue</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">UserName</label>
+            <label className="block text-sm mb-1">Username</label>
             <input
               type="text"
               name="username"
               value={form.username}
               onChange={handleChange}
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="UserName"
+              placeholder="Username"
             />
           </div>
           <div>
@@ -103,6 +107,10 @@ const Login = ({ updateUserDetails }) => {
             Submit
           </button>
         </form>
+        <h2 className="text-center my-2 text-sm text-gray-700">OR</h2>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+          <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
+        </GoogleOAuthProvider>
       </div>
     </div>
   );
