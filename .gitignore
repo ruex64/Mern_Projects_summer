@@ -1,1 +1,17 @@
-mern-project-server/MERN_Server/
+# Root ignores
+.env
+.vscode
+.DS_Store
+
+# Ignore frontend build & modules
+client/node_modules/
+client/dist/
+client/.env
+
+# Ignore backend modules
+server/node_modules/
+server/.env
+
+# Optional: OS-specific junk
+Thumbs.db
+*.log

@@ -1,60 +1,135 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from './Home';
-import Login from './LoginForm';
-import Dashboard from './pages/Dashboard';
-import Logout from './pages/Logout';
-import Error from './pages/Error';
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
 
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import axios from 'axios';
-import { serverEndpoint } from "./config";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import Logout from "./pages/Logout";
+import Error from "./pages/Error";
 
-const App = () => {
+import AppLayout from "./layout/AppLayout";
+import UserLayout from "./layout/UserLayout";
+
+import { serverEndpoint } from "./config/config";
+import { SET_USER } from "./redux/user/actions";
+
+function App() {
   const dispatch = useDispatch();
   const userDetails = useSelector((state) => state.userDetails);
-
-  const isUserLoggedIn = async () => {
-    try {
-      const response = await axios.post(`${serverEndpoint}/auth/is-user-logged-in`, {}, {
-        withCredentials: true
-      });
-      dispatch({
-        type: 'SET_USER',
-        payload: response.data.user
-      });
-    } catch (error) {
-      console.error("Auto login check failed:", error.response?.data || error.message);
-      dispatch({ type: 'CLEAR_USER' });
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    isUserLoggedIn();
-  }, []);
+    const getLoggedInUser = async () => {
+      try {
+        const response = await axios.get(`${serverEndpoint}/auth/getuser`, {
+          withCredentials: true,
+        });
+        dispatch({ type: SET_USER, payload: response.data.user });
+      } catch (err) {
+        console.log("User not logged in");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getLoggedInUser();
+  }, [dispatch]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
       <Route
         path="/"
-        element={userDetails ? <Navigate to="/dashboard" /> : <Home />}
+        element={
+          userDetails ? (
+            <Navigate to="/dashboard" />
+          ) : (
+            <AppLayout>
+              <Home />
+            </AppLayout>
+          )
+        }
       />
+
       <Route
         path="/login"
-        element={userDetails ? <Navigate to="/dashboard" /> : <Login />}
+        element={
+          userDetails ? (
+            <Navigate to="/dashboard" />
+          ) : (
+            <AppLayout>
+              <Login />
+            </AppLayout>
+          )
+        }
       />
+
       <Route
-        path="/logout"
-        element={userDetails ? <Logout /> : <Navigate to="/login" />}
+        path="/register"
+        element={
+          userDetails ? (
+            <Navigate to="/dashboard" />
+          ) : (
+            <AppLayout>
+              <Register />
+            </AppLayout>
+          )
+        }
       />
+
       <Route
         path="/dashboard"
-        element={userDetails ? <Dashboard user={userDetails} /> : <Navigate to="/login" />}
+        element={
+          userDetails ? (
+            <UserLayout>
+              <Dashboard />
+            </UserLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
       />
-      <Route path="/error" element={<Error />} />
-      <Route path="*" element={<Navigate to="/" />} />
+
+      <Route
+        path="/logout"
+        element={
+          userDetails ? (
+            <UserLayout>
+              <Logout />
+            </UserLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+
+      <Route
+        path="/error"
+        element={
+          userDetails ? (
+            <UserLayout>
+              <Error />
+            </UserLayout>
+          ) : (
+            <AppLayout>
+              <Error />
+            </AppLayout>
+          )
+        }
+      />
     </Routes>
   );
-};
+}
+
 
 export default App;

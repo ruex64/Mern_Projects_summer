@@ -1,31 +1,47 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const express = require('express'); // Include the express module
+const express = require('express');
 const cookieParser = require('cookie-parser');
-const authRoutes = require('./src/routes/authRoutes');
+const session = require('express-session');
 const cors = require('cors');
-const app = express();// Instatiate express app.
 
-mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log('MongoDB Connected'))
-.catch((error) => console.log(error));
+const authRoutes = require('./src/routes/authRoutes');
+const linksRoutes = require('./src/routes/linksRoutes');
 
-app.use(express.json());// Middleware to convert json to javascript object.
+const app = express();
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB Connected'))
+  .catch((error) => console.log(error));
+
+app.use(express.json());
 app.use(cookieParser());
 
-const corsOptions = {
-    origin: process.env.CLIENT_ENDPOINT, // This is where you want to allow requests
-    credentials: true, // Allow cookies to be sent
-}
+app.use(
+  session({
+    secret: 'yourSecretKey',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24,
+    },
+  })
+);
 
-app.use(cors(corsOptions)); // Use cors middleware with options
+app.use(
+  cors({
+    origin: process.env.CLIENT_ENDPOINT,
+    credentials: true,
+  })
+);
 
 app.use('/auth', authRoutes);
+app.use('/links', linksRoutes);
+
 const PORT = 5001;
-app.listen(5001, (error) => {
-    if(error){
-        console.log('Error starting the server: ', error);
-    } else{
-        console.log('Server is running on port: ', PORT);
-    }
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
